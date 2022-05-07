@@ -1,4 +1,5 @@
 package com.jiuzhang.seckill;
+//day1
 
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
