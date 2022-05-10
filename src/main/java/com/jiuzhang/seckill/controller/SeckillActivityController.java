@@ -7,6 +7,7 @@ import com.jiuzhang.seckill.db.po.Order;
 import com.jiuzhang.seckill.db.po.SeckillActivity;
 import com.jiuzhang.seckill.db.po.SeckillCommodity;
 import com.jiuzhang.seckill.services.SeckillActivityService;
+import com.jiuzhang.seckill.util.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
+import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -25,17 +27,21 @@ import java.util.Map;
 @Controller
 public class SeckillActivityController {
 
-    @Autowired
+    @Resource
     private SeckillActivityDao seckillActivityDao;
 
-    @Autowired
+    @Resource
     private SeckillCommodityDao seckillCommodityDao;
 
-    @Autowired
+    @Resource
     private SeckillActivityService seckillActivityService;
 
-    @Autowired
+    @Resource
     private OrderDao orderDao;
+
+    @Resource
+    private RedisService redisService;
+
 
     @RequestMapping("/seckills")
     public String activityList(Map<String, Object> resultMap) {
@@ -114,6 +120,15 @@ public class SeckillActivityController {
         ModelAndView modelAndView = new ModelAndView();
         try {
             /*
+             * 判断用户是否在已购名单中
+             */
+            if (redisService.isInLimitMember(seckillActivityId, userId)) {
+                //提示用户已经在限购名单中，返回结果
+                modelAndView.addObject("resultInfo", "对不起，您已经在限购名单中");
+                modelAndView.setViewName("seckill_result");
+                return modelAndView;
+            }
+            /*
              * 确认是否能够进行秒杀
              */
             stockValidateResult = seckillActivityService.seckillStockValidator(seckillActivityId);
@@ -121,6 +136,9 @@ public class SeckillActivityController {
                 Order order = seckillActivityService.createOrder(seckillActivityId, userId);
                 modelAndView.addObject("resultInfo","秒杀成功，订单创建中，订单ID：" + order.getOrderNo());
                 modelAndView.addObject("orderNo",order.getOrderNo());
+
+                //添加用户到已购名单中
+                redisService.addLimitMember(seckillActivityId, userId);
             } else {
                 modelAndView.addObject("resultInfo","对不起，商品库存不足");
             }
@@ -159,7 +177,7 @@ public class SeckillActivityController {
      * @return
      */
     @RequestMapping("/seckill/payOrder/{orderNo}")
-    public String payOrder(@PathVariable String orderNo){
+    public String payOrder(@PathVariable String orderNo) throws Exception {
         seckillActivityService.payOrderProcess(orderNo);
         return "redirect:/seckill/orderQuery/" + orderNo;
     }
