@@ -3,17 +3,18 @@ package com.jiuzhang.seckill.services;
 import com.alibaba.fastjson.JSON;
 import com.jiuzhang.seckill.db.dao.OrderDao;
 import com.jiuzhang.seckill.db.dao.SeckillActivityDao;
+import com.jiuzhang.seckill.db.dao.SeckillCommodityDao;
 import com.jiuzhang.seckill.db.po.Order;
 import com.jiuzhang.seckill.db.po.SeckillActivity;
+import com.jiuzhang.seckill.db.po.SeckillCommodity;
 import com.jiuzhang.seckill.mq.RocketMQService;
 import com.jiuzhang.seckill.util.RedisService;
 import com.jiuzhang.seckill.util.SnowFlake;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.Resource;
 import java.util.Date;
+import javax.annotation.Resource;
+
 @Slf4j
 @Service
 public class SeckillActivityService {
@@ -29,6 +30,10 @@ public class SeckillActivityService {
 
     @Resource
     private OrderDao orderDao;
+
+    @Resource
+    SeckillCommodityDao seckillCommodityDao;
+
 
     /**
      * datacenterId;  数据中心
@@ -73,6 +78,20 @@ public class SeckillActivityService {
 
         return order;
     }
+
+    /**
+     * 将秒杀详情相关信息倒入redis
+     *
+     * @param seckillActivityId
+     */
+    public void pushSeckillInfoToRedis(long seckillActivityId) {
+        SeckillActivity seckillActivity = seckillActivityDao.querySeckillActivityById(seckillActivityId);
+        redisService.setValue("seckillActivity:" + seckillActivityId, JSON.toJSONString(seckillActivity));
+
+        SeckillCommodity seckillCommodity = seckillCommodityDao.querySeckillCommodityById(seckillActivity.getCommodityId());
+        redisService.setValue("seckillCommodity:" + seckillActivity.getCommodityId(), JSON.toJSONString(seckillCommodity));
+    }
+
 
     /**
      * 订单支付完成处理
