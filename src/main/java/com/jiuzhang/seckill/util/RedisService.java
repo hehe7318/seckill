@@ -143,4 +143,48 @@ public class RedisService {
         jedisClient.close();
     }
 
+    /**
+     * 获取分布式锁
+     * @param lockKey
+     * @param requestId
+     * @param expireTime
+     * @return
+     */
+    public boolean tryGetDistributedLock(String lockKey, String requestId, int
+            expireTime) {
+        Jedis jedisClient = jedisPool.getResource();
+        String result = jedisClient.set(lockKey, requestId, "NX", "PX", expireTime);
+//        nxxx 参数有两个值可选 ：
+//        NX： not exists, 只有key 不存在时才把 key value set 到 redis
+//        XX： is exists ，只有 key 存在是，才把 key value set 到 redis
+//        expx 参数有两个值可选 ：
+//        EX： seconds 秒
+//        PX: milliseconds 毫秒
+
+        jedisClient.close();
+        if ("OK".equals(result)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 释放分布式锁
+     *
+     * @param lockKey 锁
+     * @param requestId 请求标识
+     * @return 是否释放成功
+     */
+    public boolean releaseDistributedLock(String lockKey, String requestId) {
+        Jedis jedisClient = jedisPool.getResource();
+        String script = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+        Long result = (Long) jedisClient.eval(script,
+                Collections.singletonList(lockKey), Collections.singletonList(requestId));
+        jedisClient.close();
+        if (result == 1L) {
+            return true;
+        }
+        return false;
+    }
+
 }
