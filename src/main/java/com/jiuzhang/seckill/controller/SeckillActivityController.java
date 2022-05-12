@@ -52,8 +52,7 @@ public class SeckillActivityController {
     @RequestMapping("/seckills")
     public String activityList(Map<String, Object> resultMap) {
         try (Entry entry = SphU.entry("seckills")) {
-            List<SeckillActivity> seckillActivities =
-                    seckillActivityDao.querySeckillActivitysByStatus(1);
+            List<SeckillActivity> seckillActivities = seckillActivityDao.querySeckillActivitysByStatus(1);
             resultMap.put("seckillActivities", seckillActivities);
             return "seckill_activity";
         } catch (BlockException ex) {

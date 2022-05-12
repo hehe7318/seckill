@@ -59,9 +59,9 @@ public class TestController {
         rule.setCount(1);
 
         FlowRule rule2 = new FlowRule();
+        rule2.setResource("HelloResource");
         rule2.setGrade(RuleConstant.FLOW_GRADE_QPS);
         rule2.setCount(2);
-        rule2.setResource("HelloResource");
         //3.将限流规则放到集合中
         rules.add(rule);
         rules.add(rule2);
